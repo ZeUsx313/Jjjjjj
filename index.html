@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatZEUS - شات زيوس</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-robot"></i> ChatZEUS</h2>
+                <button class="settings-btn" id="settingsBtn">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+            
+            <div class="conversations-list" id="conversationsList">
+                <!-- المحادثات ستظهر هنا -->
+            </div>
+            
+            <button class="new-chat-btn" id="newChatBtn">
+                <i class="fas fa-plus"></i> محادثة جديدة
+            </button>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="main-chat">
+            <div class="chat-header">
+                <div class="chat-title">
+                    <h3 id="currentChatTitle">محادثة جديدة</h3>
+                </div>
+                <div class="chat-controls">
+                    <button class="theme-toggle" id="themeToggle">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="messages-container" id="messagesContainer">
+                <div class="welcome-message">
+                    <div class="welcome-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h2>مرحباً بك في ChatZEUS</h2>
+                    <p>أنشئ وكلاء ذكاء اصطناعي واتركهم يتناقشون لحل مهامك!</p>
+                </div>
+            </div>
+            
+            <div class="input-area">
+                <div class="input-container">
+                    <textarea 
+                        id="messageInput" 
+                        placeholder="اكتب مهمتك هنا... (مثال: اكتب كود Python لحل مشكلة رياضية)"
+                        rows="1"
+                    ></textarea>
+                    <button class="send-btn" id="sendBtn">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>الإعدادات</h3>
+                <button class="close-btn" id="closeSettingsBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-tabs">
+                <button class="tab-btn active" data-tab="agents">الوكلاء</button>
+                <button class="tab-btn" data-tab="keys">المفاتيح</button>
+                <button class="tab-btn" data-tab="files">الملفات</button>
+            </div>
+            
+            <div class="tab-content active" id="agentsTab">
+                <div class="agents-section">
+                    <div class="section-header">
+                        <h4>إدارة الوكلاء</h4>
+                        <button class="add-btn" id="addAgentBtn">
+                            <i class="fas fa-plus"></i> إضافة وكيل
+                        </button>
+                    </div>
+                    <div class="agents-list" id="agentsList">
+                        <!-- الوكلاء سيظهرون هنا -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="keysTab">
+                <div class="keys-section">
+                    <div class="section-header">
+                        <h4>إدارة مفاتيح API</h4>
+                        <button class="add-btn" id="addKeyBtn">
+                            <i class="fas fa-plus"></i> إضافة مفتاح
+                        </button>
+                    </div>
+                    <div class="keys-list" id="keysList">
+                        <!-- المفاتيح ستظهر هنا -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="filesTab">
+                <div class="files-section">
+                    <div class="section-header">
+                        <h4>إدارة الملفات</h4>
+                        <button class="add-btn" id="addFileBtn">
+                            <i class="fas fa-plus"></i> إضافة ملف
+                        </button>
+                    </div>
+                    <div class="files-list" id="filesList">
+                        <!-- الملفات ستظهر هنا -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Agent Modal -->
+    <div class="modal" id="addAgentModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>إضافة وكيل جديد</h3>
+                <button class="close-btn" id="closeAddAgentBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="addAgentForm">
+                <div class="form-group">
+                    <label>اسم الوكيل:</label>
+                    <input type="text" id="agentName" required>
+                </div>
+                <div class="form-group">
+                    <label>الدور/التخصص:</label>
+                    <input type="text" id="agentRole" placeholder="مثال: برمجة، مراجعة، تحليل" required>
+                </div>
+                <div class="form-group">
+                    <label>الشخصية:</label>
+                    <textarea id="agentPersona" placeholder="صف شخصية الوكيل وأسلوب تواصله" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>نموذج AI:</label>
+                    <select id="agentModel" required>
+                        <option value="gpt-4">GPT-4</option>
+                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                        <option value="claude-3">Claude-3</option>
+                        <option value="gemini-pro">Gemini Pro</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="cancel-btn" id="cancelAddAgentBtn">إلغاء</button>
+                    <button type="submit" class="save-btn">حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Key Modal -->
+    <div class="modal" id="addKeyModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>إضافة مفتاح API</h3>
+                <button class="close-btn" id="closeAddKeyBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="addKeyForm">
+                <div class="form-group">
+                    <label>المزود:</label>
+                    <select id="keyProvider" required>
+                        <option value="openai">OpenAI</option>
+                        <option value="anthropic">Anthropic</option>
+                        <option value="google">Google</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>مفتاح API:</label>
+                    <input type="password" id="apiKey" required>
+                </div>
+                <div class="form-group">
+                    <label>الاسم (اختياري):</label>
+                    <input type="text" id="keyName" placeholder="مثال: مفتاح العمل">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="cancel-btn" id="cancelAddKeyBtn">إلغاء</button>
+                    <button type="submit" class="save-btn">حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add File Modal -->
+    <div class="modal" id="addFileModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>إضافة ملف</h3>
+                <button class="close-btn" id="closeAddFileBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="addFileForm">
+                <div class="form-group">
+                    <label>اسم الملف:</label>
+                    <input type="text" id="fileName" required>
+                </div>
+                <div class="form-group">
+                    <label>نوع الملف:</label>
+                    <select id="fileType" required>
+                        <option value="text">نص</option>
+                        <option value="code">كود</option>
+                        <option value="document">مستند</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>محتوى الملف:</label>
+                    <textarea id="fileContent" rows="10" placeholder="أدخل محتوى الملف هنا..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="cancel-btn" id="cancelAddFileBtn">إلغاء</button>
+                    <button type="submit" class="save-btn">حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
