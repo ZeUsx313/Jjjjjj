@@ -79,6 +79,46 @@ body {
     align-items: center;
 }
 
+.sidebar-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.toggle-sidebar-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.toggle-sidebar-btn:hover {
+    background-color: var(--bg-tertiary);
+    color: var(--accent-color);
+}
+
+.sidebar.collapsed {
+    width: 60px;
+}
+
+.sidebar.collapsed .sidebar-header h2,
+.sidebar.collapsed .conversations-list,
+.sidebar.collapsed .new-chat-btn {
+    display: none;
+}
+
+.sidebar.collapsed .toggle-sidebar-btn i {
+    transform: rotate(180deg);
+}
+
+.main-chat.expanded {
+    margin-right: 60px;
+}
+
 .sidebar-header h2 {
     color: var(--accent-color);
     font-size: 1.5rem;

@@ -8,6 +8,7 @@ class ChatZEUS {
         this.currentConversation = null;
         this.currentTheme = 'light';
         this.isProcessing = false;
+        this.currentKeyIndex = 0;
         
         this.init();
     }
@@ -20,6 +21,7 @@ class ChatZEUS {
         this.renderFiles();
         this.renderConversations();
         this.applyTheme();
+        this.loadSidebarState();
     }
 
     // Data Management
@@ -51,7 +53,7 @@ class ChatZEUS {
                 name: 'CodeMaster',
                 role: 'مبرمج',
                 persona: 'أنا مبرمج محترف متخصص في حل المشاكل البرمجية. أعمل بدقة وأحب الكود النظيف والمحسن.',
-                model: 'gpt-4',
+                model: 'gpt-4o',
                 avatar: '💻'
             },
             {
@@ -59,7 +61,7 @@ class ChatZEUS {
                 name: 'Reviewer',
                 role: 'مراجع',
                 persona: 'أنا مراجع دقيق، أتحقق من الكود والأفكار وأقدم اقتراحات للتحسين.',
-                model: 'gpt-4',
+                model: 'claude-3.5-sonnet',
                 avatar: '🔍'
             },
             {
@@ -67,7 +69,7 @@ class ChatZEUS {
                 name: 'Analyst',
                 role: 'محلل',
                 persona: 'أنا محلل استراتيجي، أفهم المتطلبات وأقترح أفضل الحلول.',
-                model: 'gpt-4',
+                model: 'gemini-1.5-pro',
                 avatar: '📊'
             }
         ];
@@ -114,6 +116,9 @@ class ChatZEUS {
         // New chat
         document.getElementById('newChatBtn').addEventListener('click', () => this.startNewChat());
         
+        // Sidebar toggle
+        document.getElementById('toggleSidebarBtn').addEventListener('click', () => this.toggleSidebar());
+        
         // Theme toggle
         document.getElementById('themeToggle').addEventListener('click', () => this.toggleTheme());
         
@@ -154,6 +159,43 @@ class ChatZEUS {
         // Add active class to selected tab and content
         document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
         document.getElementById(`${tabName}Tab`).classList.add('active');
+    }
+
+    // Sidebar Management
+    toggleSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        const mainChat = document.querySelector('.main-chat');
+        const toggleBtn = document.querySelector('#toggleSidebarBtn i');
+        
+        sidebar.classList.toggle('collapsed');
+        mainChat.classList.toggle('expanded');
+        
+        if (sidebar.classList.contains('collapsed')) {
+            toggleBtn.className = 'fas fa-chevron-left';
+        } else {
+            toggleBtn.className = 'fas fa-chevron-right';
+        }
+        
+        this.saveSidebarState();
+    }
+    
+    saveSidebarState() {
+        const sidebar = document.querySelector('.sidebar');
+        const isCollapsed = sidebar.classList.contains('collapsed');
+        localStorage.setItem('chatzeus_sidebar_collapsed', isCollapsed);
+    }
+    
+    loadSidebarState() {
+        const isCollapsed = localStorage.getItem('chatzeus_sidebar_collapsed') === 'true';
+        if (isCollapsed) {
+            const sidebar = document.querySelector('.sidebar');
+            const mainChat = document.querySelector('.main-chat');
+            const toggleBtn = document.querySelector('#toggleSidebarBtn i');
+            
+            sidebar.classList.add('collapsed');
+            mainChat.classList.add('expanded');
+            toggleBtn.className = 'fas fa-chevron-left';
+        }
     }
 
     // Theme Management
@@ -589,17 +631,22 @@ class ChatZEUS {
             return;
         }
         
+        if (this.apiKeys.length === 0) {
+            this.addSystemMessage('لا توجد مفاتيح API متاحة. يرجى إضافة مفاتيح من الإعدادات أولاً.');
+            return;
+        }
+        
         // Add system message
         this.addSystemMessage(`بدء مناقشة تلقائية بين الوكلاء لحل المهمة: "${userTask}"`);
         
-        // Simulate agent conversation
-        await this.simulateAgentDiscussion(userTask);
+        // Start real agent conversation
+        await this.startRealAgentDiscussion(userTask);
         
         // Add final summary
         this.addSystemMessage('انتهت المناقشة. تم التوصل إلى نتيجة نهائية.');
     }
 
-    async simulateAgentDiscussion(userTask) {
+    async startRealAgentDiscussion(userTask) {
         const discussionSteps = [
             'تحليل المهمة وتحديد المتطلبات',
             'اقتراح حلول أولية',
@@ -613,20 +660,189 @@ class ChatZEUS {
             const step = discussionSteps[i];
             const agent = this.agents[i % this.agents.length];
             
-            // Add agent message
-            const agentMessage = {
-                sender: agent.id,
-                text: this.generateAgentResponse(agent, step, userTask),
-                timestamp: new Date().toISOString()
-            };
-            
-            this.currentConversation.messages.push(agentMessage);
-            this.renderMessages();
-            this.saveData();
-            
-            // Wait a bit to simulate thinking
-            await this.delay(1000 + Math.random() * 2000);
+            try {
+                // Get real response from AI model
+                const response = await this.getAIResponse(agent, step, userTask, discussionSteps.slice(0, i + 1));
+                
+                // Add agent message
+                const agentMessage = {
+                    sender: agent.id,
+                    text: response,
+                    timestamp: new Date().toISOString()
+                };
+                
+                this.currentConversation.messages.push(agentMessage);
+                this.renderMessages();
+                this.saveData();
+                
+                // Small delay between responses
+                await this.delay(500);
+                
+            } catch (error) {
+                console.error(`Error getting response from ${agent.name}:`, error);
+                
+                // Fallback to generated response
+                const fallbackResponse = this.generateAgentResponse(agent, step, userTask);
+                const agentMessage = {
+                    sender: agent.id,
+                    text: fallbackResponse + '\n\n[ملاحظة: تم استخدام رد احتياطي بسبب خطأ في الاتصال]',
+                    timestamp: new Date().toISOString()
+                };
+                
+                this.currentConversation.messages.push(agentMessage);
+                this.renderMessages();
+                this.saveData();
+            }
         }
+    }
+
+    async getAIResponse(agent, step, userTask, previousSteps) {
+        const apiKey = this.getNextApiKey(agent.model);
+        if (!apiKey) {
+            throw new Error(`لا يوجد مفتاح API متاح للنموذج: ${agent.model}`);
+        }
+        
+        const prompt = this.buildAgentPrompt(agent, step, userTask, previousSteps);
+        
+        try {
+            if (agent.model.startsWith('gpt')) {
+                return await this.callOpenAI(apiKey.key, agent.model, prompt);
+            } else if (agent.model.startsWith('claude')) {
+                return await this.callAnthropic(apiKey.key, agent.model, prompt);
+            } else if (agent.model.startsWith('gemini')) {
+                return await this.callGoogle(apiKey.key, agent.model, prompt);
+            } else {
+                throw new Error(`نموذج غير معروف: ${agent.model}`);
+            }
+        } catch (error) {
+            // Update API key usage
+            apiKey.usage++;
+            this.saveData();
+            throw error;
+        }
+    }
+    
+    getNextApiKey(modelType) {
+        let availableKeys = [];
+        
+        if (modelType.startsWith('gpt')) {
+            availableKeys = this.apiKeys.filter(key => key.provider === 'openai');
+        } else if (modelType.startsWith('claude')) {
+            availableKeys = this.apiKeys.filter(key => key.provider === 'anthropic');
+        } else if (modelType.startsWith('gemini')) {
+            availableKeys = this.apiKeys.filter(key => key.provider === 'google');
+        }
+        
+        if (availableKeys.length === 0) return null;
+        
+        // Round Robin selection
+        const nextKey = availableKeys[this.currentKeyIndex % availableKeys.length];
+        this.currentKeyIndex = (this.currentKeyIndex + 1) % availableKeys.length;
+        
+        return nextKey;
+    }
+    
+    buildAgentPrompt(agent, step, userTask, previousSteps) {
+        const context = previousSteps.length > 0 
+            ? `\n\nالمناقشة السابقة:\n${previousSteps.map((s, i) => `${i + 1}. ${s}`).join('\n')}`
+            : '';
+            
+        return `أنت ${agent.name}، ${agent.role} متخصص في ${agent.persona}
+
+المهمة: ${userTask}
+
+الخطوة الحالية: ${step}
+
+${context}
+
+قم بالرد بناءً على تخصصك وشخصيتك. اكتب رداً مفصلاً ومفيداً باللغة العربية. إذا كنت تقدم كود، استخدم تنسيق markdown مع تمييز اللغة المناسبة.`;
+    }
+    
+    async callOpenAI(apiKey, model, prompt) {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: model,
+                messages: [
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ],
+                max_tokens: 2000,
+                temperature: 0.7
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`OpenAI API Error: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        return data.choices[0].message.content;
+    }
+    
+    async callAnthropic(apiKey, model, prompt) {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01'
+            },
+            body: JSON.stringify({
+                model: model,
+                max_tokens: 2000,
+                messages: [
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ]
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Anthropic API Error: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        return data.content[0].text;
+    }
+    
+    async callGoogle(apiKey, model, prompt) {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                contents: [
+                    {
+                        parts: [
+                            {
+                                text: prompt
+                            }
+                        ]
+                    }
+                ],
+                generationConfig: {
+                    maxOutputTokens: 2000,
+                    temperature: 0.7
+                }
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Google API Error: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        return data.candidates[0].content.parts[0].text;
     }
 
     generateAgentResponse(agent, step, userTask) {
